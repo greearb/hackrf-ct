@@ -44,8 +44,9 @@ typedef int bool;
 	#define false 0
 #endif
 
-// to disable printing
-// #define fprintf(fmt, ...) 
+/* to disable printing
+   #define fprintf(fmt, ...) 
+*/
 
 #ifdef _WIN32
 	#include <windows.h>
@@ -116,14 +117,14 @@ int gettimeofday(struct timeval* tv, void* ignored)
 #define BASEBAND_FILTER_BW_MIN (1750000)  /* 1.75 MHz min value */
 #define BASEBAND_FILTER_BW_MAX (28000000) /* 28 MHz max value */
 
-// hackrf_tx_ct to 
+/* hackrf_tx_ct to */
 #define TRANSFER_BUFFER_SIZE_TMP  262144
 
 
-// The first frequency in a hopping sequence is selected randomly form the group of
-// frequencies from 5250-5724 MHz.  Next the frequency what is choosen is removed from the group
+/* The first frequency in a hopping sequence is selected randomly form the group of */
+/* frequencies from 5250-5724 MHz.  Next the frequency what is choosen is removed from the group */
 
-// https://codeforwin.org/c-programming/c-program-to-delete-element-from-array
+/* https://codeforwin.org/c-programming/c-program-to-delete-element-from-array */
 
 int64_t tx_freq [475];
 int freq_index;
@@ -511,11 +512,11 @@ int rx_callback(hackrf_transfer* transfer)
 }
 
 
-// The first frequency in a hopping sequence is selected randomly form the group of
-// frequencies from 5250-5724 MHz.  Next the frequency what is choosen is removed from the group
+/* The first frequency in a hopping sequence is selected randomly form the group of */
+/* frequencies from 5250-5724 MHz.  Next the frequency what is choosen is removed from the group */
 int initialize_freq_array(void)
 {
-	//int64_t freq = 5320000000;
+	/* int64_t freq = 5320000000;*/
 	int64_t freq = 5250000000;
 	for(freq_index=0; freq_index < 475; freq_index++)
 	{
@@ -649,7 +650,7 @@ int tx_callback(hackrf_transfer* transfer)
 
 static void tx_complete_callback(hackrf_transfer* transfer, int success)
 {
-	// If a transfer failed to complete, stop the main loop.
+	/* If a transfer failed to complete, stop the main loop. */
 	if (!success) {
 		stop_main_loop();
 		return;
@@ -851,7 +852,7 @@ int main(int argc, char** argv)
 			stream_buf = calloc(1, stream_size);
 			break;
 
-		// limit the frequency to the first 4 digits
+		/* limit the frequency to the first 4 digits */
 		case 'f':
 			result = parse_frequency_i64(optarg, endptr, &freq_hz);
 			automatic_tuning = true;
@@ -963,7 +964,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-    // hackrf_tx_ct try starting earlier
+    /* hackrf_tx_ct try starting earlier */
 
 	if (lna_gain % 8)
 		fprintf(stderr, "warning: lna_gain (-l) must be a multiple of 8\n");
@@ -1186,7 +1187,7 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Receive wav file: %s\n", path);
 	}
 
-	// In signal source mode, the PATH argument is neglected.
+	/* In signal source mode, the PATH argument is neglected. */
 	if (transceiver_mode != TRANSCEIVER_MODE_SS) {
 		if (path == NULL) {
 			fprintf(stderr, "specify a path to a file to transmit/receive\n");
@@ -1195,7 +1196,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-    // hackrf_tx_ct moving things outside main loop
+    /* hackrf_tx_ct moving things outside main loop */
 	result = hackrf_init();
 	if (result != HACKRF_SUCCESS) {
 		fprintf(stderr,
@@ -1207,38 +1208,38 @@ int main(int argc, char** argv)
 	}
 
 
-	// initialize the tx_freq array
+	/* initialize the tx_freq array */
 	initialize_freq_array();
 
-	// randon index to user for tx the center frequency
-	// seed the random number
+	/* randon index to user for tx the center frequency */
+	/* seed the random number */
 	srand(time(NULL));
 	random_freq_iteration_index = rand() % 100;
 	fprintf(stderr,"random_freq_iteration_index %d\n",random_freq_iteration_index);
 
-	// note the freq_hz may not be rounded to the nearest 1 million
+	/* note the freq_hz may not be rounded to the nearest 1 million */
 	freq_hz_rounded_1M = trunc(freq_hz/1000000)*1000000;
 
 	fprintf(stderr,"freq_hz %ld to nearest 1000000 is %ld\n",freq_hz,freq_hz_rounded_1M);
 
-	// the array is immutable so set the intial size of the array
+	/* the array is immutable so set the intial size of the array */
 	arrLen = sizeof(tx_freq)/sizeof(tx_freq[0]);
 	fprintf(stderr,"initial arrLen %d\n",arrLen);
 
 	
 
-	// find the index of the frequency in the array
+	/* find the index of the frequency in the array */
 
-    // hackrf_tx_ct
+    /* hackrf_tx_ct */
     i = 0;        
     while(1){
         fprintf(stderr,"hackrf_tx_ct in while\n");
 		gettimeofday(&time_begin, NULL);
         if(i<100){
-			// at the random interval tx the frequecy of the channel
+			/* at the random interval tx the frequecy of the channel */
 			if (i == random_freq_iteration_index){
 				center_tx_freq_hz = freq_hz_rounded_1M;
-				// find the indes
+				/* find the indecies */
 				for(iter_index=0; iter_index<arrLen; iter_index++){
 					if (tx_freq[iter_index]== center_tx_freq_hz){
 						index_to_remove = iter_index;
@@ -1248,8 +1249,7 @@ int main(int argc, char** argv)
 			}
 			else{
 				srand(time(NULL));
-				//index_to_remove =rand() % len(tx_freq);
-				index_to_remove =rand() % arrLen; // note the tx_freq is immutable so the length is the same
+				index_to_remove =rand() % arrLen; /* note the tx_freq is immutable so the length is the same */
 				center_tx_freq_hz = tx_freq[index_to_remove];
 
 			}
@@ -1262,13 +1262,12 @@ int main(int argc, char** argv)
 			*/
 
 			fprintf(stderr,"tx index: %d tx freq: %ld\n",index_to_remove,tx_freq[index_to_remove]);
-			// remove from the array, move up other entries
+			/* remove from the array, move up other entries */
 			for(freq_index=index_to_remove; freq_index<arrLen; freq_index++){
 				tx_freq[freq_index]=tx_freq[freq_index+1];
 			}
 			arrLen -= 1;
 
-			//size_of_tx_freq = sizeof(tx_freq);
 			fprintf(stderr,"size of tx_freq (arrLen) %i\n",arrLen);
 
 			fprintf(stderr,"setting tx_complete to false\n");
@@ -1280,26 +1279,26 @@ int main(int argc, char** argv)
 		}
 		i++;
 
-		// hackrf_tx_ct only done once
-        // Change the freq and sample rate to correct the crystal clock error.
-		// hackrf_tx_ct 
+		/* hackrf_tx_ct only done once */
+        /* Change the freq and sample rate to correct the crystal clock error. */
+		/* hackrf_tx_ct  */
         if (crystal_correct) {
-			fprintf(stderr,"crystal_correct"); // not used in hop
+			fprintf(stderr,"crystal_correct"); /* not used in hop */
             sample_rate_hz =
                 (uint32_t) ((double) sample_rate_hz * (1000000 - crystal_correct_ppm) / 1000000 + 0.5);
             freq_hz = freq_hz * (1000000 - crystal_correct_ppm) / 1000000;
         }
 
-		// hackrf_tx_ct initial location of hackrf_init()
-        //result = hackrf_init();
-        //if (result != HACKRF_SUCCESS) {
-        //    fprintf(stderr,
-        //        "hackrf_init() failed: %s (%d)\n",
-        //        hackrf_error_name(result),
-        //        result);
-        //    usage();
-        //    return EXIT_FAILURE;
-        //}
+		/* hackrf_tx_ct initial location of hackrf_init() */
+        /* result = hackrf_init(); */
+        /* if (result != HACKRF_SUCCESS) { */
+        /*    fprintf(stderr, */
+        /*        "hackrf_init() failed: %s (%d)\n", */
+        /*        hackrf_error_name(result), */
+        /*         result); */
+        /*    usage(); */
+        /*    return EXIT_FAILURE; */
+        /*} */
 
 		/*
 		gettimeofday(&time_check, NULL);
@@ -1454,17 +1453,18 @@ int main(int argc, char** argv)
             usage();
             return EXIT_FAILURE;
         }
-        // TODO be able to set the frequency after competion and re-transmit.
+        /* TODO be able to set the frequency after competion and re-transmit. */
         if (automatic_tuning) {
-            //fprintf(stderr,	"call hackrf_set_freq(%s Hz/%.03f MHz)\n",u64toa(freq_hz, &ascii_u64_data[0]),
-            //    ((double) freq_hz / (double) FREQ_ONE_MHZ)); 
-            //result = hackrf_set_freq(device, freq_hz); // Set the hackrf frequency look for API
-			//fprintf(stderr, "call hackrf_set_freq , freq_hz %ld \n",freq_hz);
+            /*fprintf(stderr,	"call hackrf_set_freq(%s Hz/%.03f MHz)\n",u64toa(freq_hz, &ascii_u64_data[0]),
+                ((double) freq_hz / (double) FREQ_ONE_MHZ)); 
+            	result = hackrf_set_freq(device, freq_hz); 
+				fprintf(stderr, "call hackrf_set_freq , freq_hz %ld \n",freq_hz);
+			*/
             
 			fprintf(stderr,	"call hackrf_set_freq(%s Hz/%.03f MHz)\n",u64toa(center_tx_freq_hz, &ascii_u64_data[0]),
                 ((double) center_tx_freq_hz / (double) FREQ_ONE_MHZ)); 
-			// hackrf_tx_ct used for testing center_tx_freq_hz = 5320000000;
-            result = hackrf_set_freq(device, center_tx_freq_hz); // Set the hackrf frequency look for API
+			/* hackrf_tx_ct used for testing center_tx_freq_hz = 5320000000;*/
+            result = hackrf_set_freq(device, center_tx_freq_hz); /* Set the hackrf frequency look for API */
 			fprintf(stderr, "call hackrf_set_freq , center_tx_freq_hz %ld \n",center_tx_freq_hz);
 
             if (result != HACKRF_SUCCESS) {
@@ -1557,7 +1557,7 @@ int main(int argc, char** argv)
 
         fprintf(stderr, "Stop with Ctrl-C\n");
 
-        // Set up an interval timer which will fire once per second.
+        /* Set up an interval timer which will fire once per second. */
     #ifdef _WIN32
         HANDLE timer_handle = CreateWaitableTimer(NULL, FALSE, NULL);
         LARGE_INTEGER due_time;
@@ -1570,24 +1570,25 @@ int main(int argc, char** argv)
             .it_value = {.tv_sec = 1, .tv_usec = 0}};
         setitimer(ITIMER_REAL, &interval_timer, NULL);
     #endif
-        // TODO hackrf_tx_ct try experiment
-            // the buffere does not get refilled here
-            // this also has a 1 second timer
-            // this appears to be a 1 second timer for this loop 
+        /* TODO hackrf_tx_ct try experiment
+            the buffere does not get refilled here
+            this also has a 1 second timer
+            this appears to be a 1 second timer for this loop 
+		*/
 			fprintf(stderr,"do_exit: %d \n", do_exit);
 			if (do_exit == true){
 				do_exit = false;
 				fprintf(stderr,"setting do_exit false");
 			}
             while (!do_exit) {
-                // hackrf_tx_ct for this test only need a counter to set do_exit
+                /* hackrf_tx_ct for this test only need a counter to set do_exit */
                 fprintf(stderr,"StartTX Data\n");
                 struct timeval time_now;
                 float time_difference, rate;
                 if (stream_size > 0) {
         #ifndef _WIN32
                     if (stream_head == stream_tail) {
-                        usleep(1000); // queue empty
+                        usleep(1000); /* queue empty */
                     } else {
                         ssize_t len;
                         ssize_t bytes_written;
@@ -1617,11 +1618,11 @@ int main(int argc, char** argv)
                     uint64_t byte_count_now;
                     uint64_t stream_power_now;
         #ifdef _WIN32
-                    // Wait for interval timer event, or interrupt event.
+                    /* Wait for interval timer event, or interrupt event. */
                     HANDLE handles[] = {timer_handle, interrupt_handle};
                     WaitForMultipleObjects(2, handles, FALSE, INFINITE);
         #else
-                    // Wait for SIGALRM from interval timer, or another signal.
+                    /* Wait for SIGALRM from interval timer, or another signal. */
                     pause();
         #endif
                     gettimeofday(&time_now, NULL);
@@ -1680,7 +1681,7 @@ int main(int argc, char** argv)
                     }
                 }
                 fprintf(stderr,"TX complete\n");
-                //do_exit = true;
+                /* do_exit = true; */
 				/*
 				gettimeofday(&time_check, NULL);
 				time_diff = TimevalDiff(&time_check, &time_begin);
@@ -1690,8 +1691,8 @@ int main(int argc, char** argv)
 
 
             }
-        //}
-        // Stop interval timer.
+        /*}*/
+        /* Stop interval timer. */
     #ifdef _WIN32
         CancelWaitableTimer(timer_handle);
         CloseHandle(timer_handle);
@@ -1725,19 +1726,20 @@ int main(int argc, char** argv)
                     fprintf(stderr, "hackrf_stop_rx() done\n");
                 }
             }
-
-            // hackrf_tx_ct commented out 
-            //if (transmit || signalsource) {
-            //    result = hackrf_stop_tx(device);
-            //    if (result != HACKRF_SUCCESS) {
-            //        fprintf(stderr,
-            //            "hackrf_stop_tx() failed: %s (%d)\n",
-            //            hackrf_error_name(result),
-            //            result);
-            //    } else {
-            //        /*fprintf(stderr, "hackrf_stop_tx() done\n");*/
-            //    }
-            //}
+			/*
+               hackrf_tx_ct commented out  */
+            /*if (transmit || signalsource) {
+                result = hackrf_stop_tx(device);
+                if (result != HACKRF_SUCCESS) {
+                    fprintf(stderr,
+                        "hackrf_stop_tx() failed: %s (%d)\n",
+                        hackrf_error_name(result),
+                        result);
+                } else {
+                    fprintf(stderr, "hackrf_stop_tx() done\n");
+                }
+            }
+			*/
 
             if (display_stats) {
                 result = update_stats(device, &state, &stats);
@@ -1773,9 +1775,9 @@ int main(int argc, char** argv)
 
         }
 
-        // hackrf_tx_ct for testing while loop
+        /* hackrf_tx_ct for testing while loop */
         fprintf(stderr,"first loop ");
-        //break;
+        /* break; */
     }
     hackrf_exit();
     fprintf(stderr, "hackrf_exit() done\n");
