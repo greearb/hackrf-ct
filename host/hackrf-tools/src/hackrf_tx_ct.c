@@ -799,7 +799,6 @@ int main(int argc, char** argv)
 {
 	int opt;
     int i;
-	int index_to_center_tx_freq_hz;
 	int64_t center_tx_freq_hz;
 	int64_t freq_hz_rounded_1M;
     /* int iteration;*/
