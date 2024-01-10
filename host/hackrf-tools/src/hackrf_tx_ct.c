@@ -718,6 +718,7 @@ static int update_stats(hackrf_device* device, hackrf_m0_state* state, stats_t* 
 static void usage()
 {
 	printf("Usage:\n");
+	printf("Example: hackrf_tx_ct -d 22276763 -t /home/user/git/x64_btbits/server/three_pulses_ten_mhz.bin -f 5300000000 -x 47 -s 10000000\n");
 	printf("Example: hackrf_tx_ct -d 22276763 -t /home/user/git/fcc_dfs_test/nine_pulse_hop_2Mhz.txt -f 5320000000  -x 40 -B\n");
 	printf("\t-h # this help\n");
 	printf("\t[-d serial_number] # Serial number of desired HackRF.\n");
