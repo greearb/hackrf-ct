@@ -379,6 +379,15 @@ volatile uint64_t stream_power = 0;
 bool transmit = false;
 struct timeval time_start;
 struct timeval t_start;
+struct timeval tx_start;
+struct timeval tx_end;
+struct timeval time_now;
+
+struct timeval total_time_start;
+struct timeval total_time_end;
+
+
+float time_difference, rate;
 
 /* used to help find bottle neck */
 struct timeval time_begin;
@@ -815,6 +824,7 @@ int main(int argc, char** argv)
 	int exit_code = EXIT_SUCCESS;
 	struct timeval t_end;
 	float time_diff;
+	float time_tx_diff;
 	unsigned int lna_gain = 8, vga_gain = 20, txvga_gain = 0;
 	hackrf_m0_state state;
 	stats_t stats = {0, 0};
@@ -1541,7 +1551,12 @@ int main(int argc, char** argv)
                 device,
                 tx_complete_callback);
             fprintf(stderr,"hackrf_start_tx\n");
+			gettimeofday(&tx_start, NULL);
             result |= hackrf_start_tx(device, tx_callback, NULL);
+			gettimeofday(&tx_end, NULL);
+	        time_tx_diff = TimevalDiff(&tx_end, &tx_start);
+    	    fprintf(stderr, "Total TX  time: %5.5f s\n", time_tx_diff);
+
             fprintf(stderr,"Done with Tx\n");
         }
 
@@ -1578,13 +1593,11 @@ int main(int argc, char** argv)
 			fprintf(stderr,"do_exit: %d \n", do_exit);
 			if (do_exit == true){
 				do_exit = false;
-				fprintf(stderr,"setting do_exit false");
+				fprintf(stderr,"setting do_exit false \n");
 			}
             while (!do_exit) {
                 /* hackrf_tx_ct for this test only need a counter to set do_exit */
                 fprintf(stderr,"StartTX Data\n");
-                struct timeval time_now;
-                float time_difference, rate;
                 if (stream_size > 0) {
         #ifndef _WIN32
                     if (stream_head == stream_tail) {
@@ -1642,7 +1655,7 @@ int main(int argc, char** argv)
                             (byte_count_now * 127 * 127);
                         double dB_full_scale = 10 * log10(full_scale_ratio) + 3.0;
                         fprintf(stderr,
-                            "%4.1f MiB / %5.3f sec = %4.1f MiB/second, average power %3.1f dBfs",
+                            "%4.1f MiB / %5.4f sec = %4.1f MiB/second, average power %3.1f dBfs \n",
                             (byte_count_now / 1e6f),
                             time_difference,
                             (rate / 1e6f),
@@ -1652,7 +1665,7 @@ int main(int argc, char** argv)
                             result = update_stats(device, &state, &stats);
                             if (result != HACKRF_SUCCESS)
                                 fprintf(stderr,
-                                    "\nhackrf_get_m0_state() failed: %s (%d)\n",
+                                    "\nhackrf_get_m0_state() failed: %s (%d)",
                                     hackrf_error_name(result),
                                     result);
                             else
