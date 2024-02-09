@@ -390,6 +390,7 @@ struct timeval total_time_end;
 float time_difference, rate;
 
 /* used to help find bottle neck */
+
 struct timeval time_begin;
 struct timeval time_check;
 float time_diff;
@@ -525,7 +526,7 @@ int rx_callback(hackrf_transfer* transfer)
 /* frequencies from 5250-5724 MHz.  Next the frequency what is choosen is removed from the group */
 int initialize_freq_array(void)
 {
-	/* int64_t freq = 5320000000;*/
+	/* int64_t freq = 5300000000;*/
 	int64_t freq = 5250000000;
 	for(freq_index=0; freq_index < 475; freq_index++)
 	{
@@ -1241,6 +1242,7 @@ int main(int argc, char** argv)
 	/* find the index of the frequency in the array */
 
     /* hackrf_tx_ct */
+
     i = 0;        
     while(1){
         fprintf(stderr,"hackrf_tx_ct in while\n");
@@ -1264,12 +1266,10 @@ int main(int argc, char** argv)
 
 			}
 
-			/*
 			gettimeofday(&time_check, NULL);
 			time_diff = TimevalDiff(&time_check, &time_begin);
-			fprintf(stderr, "Time 1: %5.5f s\n", time_diff);
-			gettimeofday(&time_begin, NULL);
-			*/
+			fprintf(stderr, "Time 1 Begin: %5.5f s\n", time_diff);
+			/* gettimeofday(&time_begin, NULL); */
 
 			fprintf(stderr,"tx index: %d tx freq: %ld\n",index_to_remove,tx_freq[index_to_remove]);
 			/* remove from the array, move up other entries */
@@ -1310,14 +1310,13 @@ int main(int argc, char** argv)
         /*    return EXIT_FAILURE; */
         /*} */
 
-		/*
 		gettimeofday(&time_check, NULL);
 		time_diff = TimevalDiff(&time_check, &time_begin);
-		fprintf(stderr, "Time 2: %5.5f s\n", time_diff);
-		gettimeofday(&time_begin, NULL);
-		*/
+		fprintf(stderr, "Time 2 Before hackrf_open_by_serial: %5.5f s\n", time_diff);
+		/* gettimeofday(&time_begin, NULL); */
 
 		result = hackrf_open_by_serial(serial_number, &device);
+		/* fprintf(stderr,"hackrf_open \n"); */
 		if (result != HACKRF_SUCCESS) {
 			fprintf(stderr,
 				"hackrf_open() failed: %s (%d)\n",
@@ -1326,12 +1325,14 @@ int main(int argc, char** argv)
 			usage();
 			return EXIT_FAILURE;
 		}
-		/*
+		else{
+				fprintf(stderr, "Success: hackrf_open \n");
+		}
+
 		gettimeofday(&time_check, NULL);
 		time_diff = TimevalDiff(&time_check, &time_begin);
-		fprintf(stderr, "Time 3: %5.5f s\n", time_diff);
-		gettimeofday(&time_begin, NULL);
-		*/
+		fprintf(stderr, "Time 3 After hackrf_open_by_serial: %5.5f s\n", time_diff);
+		/* gettimeofday(&time_begin, NULL); */
 
 
         if (transceiver_mode != TRANSCEIVER_MODE_SS) {
@@ -1384,13 +1385,6 @@ int main(int argc, char** argv)
         signal(SIGALRM, &sigalrm_callback_handler);
     #endif
 
-		/*
-		gettimeofday(&time_check, NULL);
-		time_diff = TimevalDiff(&time_check, &time_begin);
-		fprintf(stderr, "Time 4: %5.5f s\n", time_diff);
-		gettimeofday(&time_begin, NULL);
-		*/
-
 		/* only set the sample rate onetime */
 		if ( !set_sample_rate){
 			fprintf(stderr,
@@ -1408,13 +1402,6 @@ int main(int argc, char** argv)
 			}
 			set_sample_rate = true;
 		}
-
-		/*
-		gettimeofday(&time_check, NULL);
-		time_diff = TimevalDiff(&time_check, &time_begin);
-		fprintf(stderr, "Time 4a: %5.5f s\n", time_diff);
-		gettimeofday(&time_begin, NULL);
-		*/
 
 
         if (baseband_filter_bw) {
@@ -1435,34 +1422,28 @@ int main(int argc, char** argv)
             }
         }
 
-		/*
 		gettimeofday(&time_check, NULL);
 		time_diff = TimevalDiff(&time_check, &time_begin);
-		fprintf(stderr, "Time 5: %5.5f s\n", time_diff);
-		gettimeofday(&time_begin, NULL);
-		*/
+		fprintf(stderr, "Time 5 Before hackrf_set_hw_sync_mode: %5.5f s\n", time_diff);
+		/* gettimeofday(&time_begin, NULL); */
 
 
-        fprintf(stderr, "call hackrf_set_hw_sync_mode(%d)\n", hw_sync ? 1 : 0);
-        result = hackrf_set_hw_sync_mode(
-            device,
-            hw_sync ? HW_SYNC_MODE_ON : HW_SYNC_MODE_OFF);
-        if (result != HACKRF_SUCCESS) {
-            fprintf(stderr,
-                "hackrf_set_hw_sync_mode() failed: %s (%d)\n",
-                hackrf_error_name(result),
-                result);
-            return EXIT_FAILURE;
-        }
+		fprintf(stderr, "call hackrf_set_hw_sync_mode(%d)\n", hw_sync ? 1 : 0);
+		result = hackrf_set_hw_sync_mode(
+			device,
+			hw_sync ? HW_SYNC_MODE_ON : HW_SYNC_MODE_OFF);
+		if (result != HACKRF_SUCCESS) {
+			fprintf(stderr,
+				"hackrf_set_hw_sync_mode() failed: %s (%d)\n",
+				hackrf_error_name(result),
+				result);
+			return EXIT_FAILURE;
+		}
+		gettimeofday(&time_check, NULL);
+		time_diff = TimevalDiff(&time_check, &time_begin);
+		fprintf(stderr, "Time 5a After hackrf_set_hw_sync_mode, Before hackrf_set_freq: %5.5f s\n", time_diff);
 
-        if (result != HACKRF_SUCCESS) {
-            fprintf(stderr,
-                "hackrf_start_?x() failed: %s (%d)\n",
-                hackrf_error_name(result),
-                result);
-            usage();
-            return EXIT_FAILURE;
-        }
+
         /* TODO be able to set the frequency after competion and re-transmit. */
         if (automatic_tuning) {
             /*fprintf(stderr,	"call hackrf_set_freq(%s Hz/%.03f MHz)\n",u64toa(freq_hz, &ascii_u64_data[0]),
@@ -1475,6 +1456,10 @@ int main(int argc, char** argv)
                 ((double) center_tx_freq_hz / (double) FREQ_ONE_MHZ)); 
 			/* hackrf_tx_ct used for testing center_tx_freq_hz = 5320000000;*/
             result = hackrf_set_freq(device, center_tx_freq_hz); /* Set the hackrf frequency look for API */
+			gettimeofday(&time_check, NULL);
+			time_diff = TimevalDiff(&time_check, &time_begin);
+			fprintf(stderr, "Time 5b After hackrf_set_freq: %5.5f s\n", time_diff);
+
 			fprintf(stderr, "call hackrf_set_freq , center_tx_freq_hz %ld \n",center_tx_freq_hz);
 
             if (result != HACKRF_SUCCESS) {
@@ -1505,14 +1490,10 @@ int main(int argc, char** argv)
                 return EXIT_FAILURE;
             }
         }
-		/*
 		gettimeofday(&time_check, NULL);
 		time_diff = TimevalDiff(&time_check, &time_begin);
-		fprintf(stderr, "Time 6: %5.5f s\n", time_diff);
-		gettimeofday(&time_begin, NULL);
-		*/
-
-
+		fprintf(stderr, "Time 6 Before hackrf_start_tx: %5.5f s\n", time_diff);
+		/* gettimeofday(&time_begin, NULL); */
 
         if (amp) {
             fprintf(stderr, "call hackrf_set_amp_enable(%u)\n", amp_enable);
@@ -1590,6 +1571,10 @@ int main(int argc, char** argv)
             this also has a 1 second timer
             this appears to be a 1 second timer for this loop 
 		*/
+			gettimeofday(&time_check, NULL);
+			time_diff = TimevalDiff(&time_check, &time_begin);
+			fprintf(stderr, "Time 6a After hackrf_start_tx: %5.5f s\n", time_diff);
+
 			fprintf(stderr,"do_exit: %d \n", do_exit);
 			if (do_exit == true){
 				do_exit = false;
@@ -1636,7 +1621,16 @@ int main(int argc, char** argv)
                     WaitForMultipleObjects(2, handles, FALSE, INFINITE);
         #else
                     /* Wait for SIGALRM from interval timer, or another signal. */
+					gettimeofday(&time_check, NULL);
+					time_diff = TimevalDiff(&time_check, &time_begin);
+					fprintf(stderr, "Time 6b Before wait for Signal: %5.5f s\n", time_diff);
+
                     pause();
+
+					gettimeofday(&time_check, NULL);
+					time_diff = TimevalDiff(&time_check, &time_begin);
+					fprintf(stderr, "Time 6c After wait for Signal: %5.5f s\n", time_diff);
+
         #endif
                     gettimeofday(&time_now, NULL);
 
@@ -1694,13 +1688,12 @@ int main(int argc, char** argv)
                     }
                 }
                 fprintf(stderr,"TX complete\n");
+
                 /* do_exit = true; */
-				/*
 				gettimeofday(&time_check, NULL);
 				time_diff = TimevalDiff(&time_check, &time_begin);
 				fprintf(stderr, "Time 7: %5.5f s\n", time_diff);
-				gettimeofday(&time_begin, NULL);
-				*/
+				/* gettimeofday(&time_begin, NULL); */
 
 
             }
