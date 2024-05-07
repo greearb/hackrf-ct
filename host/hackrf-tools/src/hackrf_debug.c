@@ -718,8 +718,7 @@ int main(int argc, char** argv)
 
 	if (set_leds) {
 		if (led_state > 0xf) {
-			fprintf(stderr,
-				"Specify LED state bit field (0 for all off, 1 for default).\n");
+			fprintf(stderr,"Specify LED state bit field (0 for all off, 1 for default).\n");
 			usage();
 			return EXIT_FAILURE;
 		}
