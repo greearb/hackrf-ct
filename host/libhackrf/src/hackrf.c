@@ -466,7 +466,7 @@ static int set_hackrf_configuration(libusb_device_handle* usb_device, int config
 	int result, curr_config;
 
 	result = libusb_get_configuration(usb_device, &curr_config);
-	printf("libusb_get_configuration result: %d \n",result);
+	// printf("libusb_get_configuration result: %d \n",result);
 
 	if (result != 0) {
 		last_libusb_error = result;
@@ -479,7 +479,7 @@ static int set_hackrf_configuration(libusb_device_handle* usb_device, int config
 			return result;
 		}
 		result = libusb_set_configuration(usb_device, config);
-		printf("libusb_set_configuration result: %d \n",result);
+		// printf("libusb_set_configuration result: %d \n",result);
 
 		if (result != 0) {
 			last_libusb_error = result;
@@ -641,7 +641,7 @@ libusb_device_handle* hackrf_open_usb(const char* const desired_serial_number)  
 	char serial_number[64];
 	int serial_number_length;
 
-	printf("hackrf_open_usb: Desired_serial_number: %s usb_list_len: %ld \n", desired_serial_number, list_length);
+	// printf("hackrf_open_usb: Desired_serial_number: %s usb_list_len: %ld \n", desired_serial_number, list_length);
 
 	if (desired_serial_number) {
 		/* If a shorter serial number is specified, only match against the suffix.
@@ -679,7 +679,7 @@ libusb_device_handle* hackrf_open_usb(const char* const desired_serial_number)  
 								(unsigned char*)
 									serial_number,
 								sizeof(serial_number));
-						printf("usb device: %s \n", serial_number);
+						// printf("usb device: %s \n", serial_number);
 
 						if (serial_number_length >=
 						    USB_MAX_SERIAL_LENGTH)
@@ -717,11 +717,11 @@ static int hackrf_open_setup(libusb_device_handle* usb_device, hackrf_device** d
 
 	//int speed = libusb_get_device_speed(usb_device);
 	// TODO: Error or warning if not high speed USB?
-	printf("hackrf_open_setup \n");
+	// printf("hackrf_open_setup \n");
 
 
 	result = set_hackrf_configuration(usb_device, USB_CONFIG_STANDARD);
-	printf("hackrf_open_setup: set_hackrf_configuration result: %d \n",result);
+	// printf("hackrf_open_setup: set_hackrf_configuration result: %d \n",result);
 
 	if (result != LIBUSB_SUCCESS) {
 		libusb_close(usb_device);
@@ -729,7 +729,7 @@ static int hackrf_open_setup(libusb_device_handle* usb_device, hackrf_device** d
 	}
 
 	result = libusb_claim_interface(usb_device, 0);
-	printf("libusb_claim_interface result: %d \n",result);
+	// printf("libusb_claim_interface result: %d \n",result);
 
 	if (result != LIBUSB_SUCCESS) {
 		last_libusb_error = result;
@@ -799,7 +799,7 @@ static int hackrf_open_setup(libusb_device_handle* usb_device, hackrf_device** d
 int ADDCALL hackrf_open(hackrf_device** device)
 {
 	libusb_device_handle* usb_device;
-	printf("hackrf_open\n");
+	// printf("hackrf_open\n");
 
 
 	if (device == NULL) {
@@ -838,7 +838,7 @@ int ADDCALL hackrf_open_by_serial(
 {
 	libusb_device_handle* usb_device;
 
-	printf("hackrf_open_by_serial\n");
+	// printf("hackrf_open_by_serial\n");
 	if (desired_serial_number == NULL) { /* test set to not equal*/
 		return hackrf_open(device);
 	}
@@ -1437,7 +1437,7 @@ int ADDCALL hackrf_set_freq(hackrf_device* device, const uint64_t freq_hz)
 	uint8_t length;
 	int result;
 
-	printf("hackrf_set_freq\n");
+	// printf("hackrf_set_freq\n");
 
 
 	/* Convert Freq Hz 64bits to Freq MHz (32bits) & Freq Hz (32bits) */
@@ -1737,7 +1737,7 @@ int ADDCALL hackrf_set_txvga_gain(hackrf_device* device, uint32_t value)
 {
 	int result;
 	uint8_t retval;
-	printf("hackrf_set_txvga_gain \n");
+	// printf("hackrf_set_txvga_gain \n");
 
 
 	if (value > 47) {
@@ -2062,7 +2062,7 @@ ADDAPI int ADDCALL hackrf_set_tx_block_complete_callback(
 	hackrf_device* device,
 	hackrf_tx_block_complete_cb_fn callback)
 {
-	printf("hackrf_set_tx_block_complete_callback \n");
+	// printf("hackrf_set_tx_block_complete_callback \n");
 	device->tx_completion_callback = callback;
 	return HACKRF_SUCCESS;
 }
@@ -2075,7 +2075,7 @@ ADDAPI int ADDCALL hackrf_enable_tx_flush(
 	device->flush_callback = callback;
 	device->flush_ctx = flush_ctx;
 
-	printf("hackrf_enable_tx_flush\n");
+	// printf("hackrf_enable_tx_flush\n");
 
 
 	if (device->flush_transfer) {
@@ -2137,7 +2137,7 @@ int ADDCALL hackrf_close(hackrf_device* device)
 	result1 = HACKRF_SUCCESS;
 	result2 = HACKRF_SUCCESS;
 
-	printf("hackrf_close\n");
+	// printf("hackrf_close\n");
 
 
 	if (device != NULL) {
