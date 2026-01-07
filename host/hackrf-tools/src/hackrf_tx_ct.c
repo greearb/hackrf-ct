@@ -106,6 +106,10 @@ int gettimeofday(struct timeval* tv, void* ignored)
 #define LO_MAX_HZ       (5400000000ll)
 #define DEFAULT_LO_HZ   (1000000000ll)
 
+#define DEFAULT_JUMPS      (100ll)
+#define DEFAULT_JUMPS_HIGH (475ll)
+#define DEFAULT_JUMPS_LOW  (1ll)
+
 #define SAMPLE_RATE_MIN_HZ     (2000000)  /* 2MHz min sample rate */
 #define SAMPLE_RATE_MAX_HZ     (20000000) /* 20MHz max sample rate */
 #define DEFAULT_SAMPLE_RATE_HZ (10000000) /* 10MHz default sample rate */
@@ -404,6 +408,8 @@ int64_t if_freq_hz;
 
 bool lo_freq = false;
 int64_t lo_freq_hz = DEFAULT_LO_HZ;
+
+int64_t jumps = DEFAULT_JUMPS;
 
 bool image_reject = false;
 uint32_t image_reject_selection;
@@ -755,6 +761,10 @@ static void usage()
 	printf("\t[-l gain_db] # RX LNA (IF) gain, 0-40dB, 8dB steps\n");
 	printf("\t[-g gain_db] # RX VGA (baseband) gain, 0-62dB, 2dB steps\n");
 	printf("\t[-x gain_db] # TX VGA (IF) gain, 0-47dB, 1dB steps\n");
+	printf("\t[-j jumps or hops] #  (%s - %s Jumps supported, default %s jumps).\n",
+	       u64toa( DEFAULT_JUMPS_LOW, &ascii_u64_data[0]),
+	       u64toa( DEFAULT_JUMPS_HIGH, &ascii_u64_data[1]),
+	       u64toa( DEFAULT_JUMPS, &ascii_u64_data[2]));
 	printf("\t[-s sample_rate_hz] # Sample rate in Hz (%s-%sMHz supported, default %sMHz).\n",
 	       u64toa((SAMPLE_RATE_MIN_HZ / FREQ_ONE_MHZ), &ascii_u64_data[0]),
 	       u64toa((SAMPLE_RATE_MAX_HZ / FREQ_ONE_MHZ), &ascii_u64_data[1]),
@@ -823,14 +833,14 @@ int main(int argc, char** argv)
 	struct tm* timeinfo;
 	long int file_pos;
 	int exit_code = EXIT_SUCCESS;
-	struct timeval t_end;
+	// struct timeval t_end;
 	float time_diff;
 	// float time_tx_diff;
 	unsigned int lna_gain = 8, vga_gain = 20, txvga_gain = 0;
 	hackrf_m0_state state;
 	stats_t stats = {0, 0};
 
-	while ((opt = getopt(argc, argv, "Hwr:t:f:i:o:m:a:p:s:Fn:b:l:g:x:c:d:C:RSZ:Bh?")) !=
+	while ((opt = getopt(argc, argv, "Hwr:j:t:f:i:o:m:a:p:s:Fn:b:l:g:x:c:d:C:RSZ:Bh?")) !=
 	       EOF) {
 		result = HACKRF_SUCCESS;
 		switch (opt) {
@@ -877,6 +887,10 @@ int main(int argc, char** argv)
 		case 'o':
 			result = parse_frequency_i64(optarg, endptr, &lo_freq_hz);
 			lo_freq = true;
+			break;
+
+		case 'j':
+			result = parse_frequency_i64(optarg, endptr, &jumps);
 			break;
 
 		case 'm':
@@ -976,6 +990,14 @@ int main(int argc, char** argv)
 	}
 
     /* hackrf_tx_ct try starting earlier */
+	if ( jumps < DEFAULT_JUMPS_LOW || jumps > DEFAULT_JUMPS_HIGH) {
+		fprintf(stderr,
+			"argument error: jumps must be between %s and %s\n",
+			u64toa(DEFAULT_JUMPS_LOW, &ascii_u64_data[0]),
+			u64toa(DEFAULT_JUMPS_HIGH, &ascii_u64_data[1]));
+		usage();
+		return EXIT_FAILURE;
+	}
 
 	if (lna_gain % 8)
 		fprintf(stderr, "warning: lna_gain (-l) must be a multiple of 8\n");
@@ -1225,7 +1247,8 @@ int main(int argc, char** argv)
 	/* randon index to user for tx the center frequency */
 	/* seed the random number */
 	srand(time(NULL));
-	random_freq_iteration_index = rand() % 100;
+	// random_freq_iteration_index = rand() % 100;
+	random_freq_iteration_index = rand() % jumps;
 	// fprintf(stderr,"random_freq_iteration_index %d\n",random_freq_iteration_index);
 
 	/* note the freq_hz may not be rounded to the nearest 1 million */
@@ -1249,7 +1272,7 @@ int main(int argc, char** argv)
 
     while(1){
         // fprintf(stderr,"hackrf_tx_ct in while\n");
-        if(i<100){
+        if(i<jumps){
 			/* at the random interval tx the frequecy of the channel */
 			if (i == random_freq_iteration_index){
 				center_tx_freq_hz = freq_hz_rounded_1M;
