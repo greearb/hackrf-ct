@@ -38,6 +38,7 @@
 #include <errno.h>
 #include <inttypes.h>
 
+
 #ifndef bool
 typedef int bool;
 	#define true 1
@@ -110,6 +111,11 @@ int gettimeofday(struct timeval* tv, void* ignored)
 #define DEFAULT_JUMPS_HIGH (475ll)
 #define DEFAULT_JUMPS_LOW  (1ll)
 
+#define DEFAULT_JUMP_BANDWIDTH      (20ll)
+#define DEFAULT_JUMP_BANDWIDTH_LOW  (20ll)
+#define DEFAULT_JUMP_BANDWIDTH_HIGH  (320ll)
+
+
 #define SAMPLE_RATE_MIN_HZ     (2000000)  /* 2MHz min sample rate */
 #define SAMPLE_RATE_MAX_HZ     (20000000) /* 20MHz max sample rate */
 #define DEFAULT_SAMPLE_RATE_HZ (10000000) /* 10MHz default sample rate */
@@ -138,6 +144,7 @@ int arrLen;
 int index_to_remove;
 int iter_index;
 int freq_index;
+struct timeval t1; 
 
 
 
@@ -410,6 +417,10 @@ bool lo_freq = false;
 int64_t lo_freq_hz = DEFAULT_LO_HZ;
 
 int64_t jumps = DEFAULT_JUMPS;
+bool jump_bw_set = false;
+int64_t jump_bandwidth = DEFAULT_JUMP_BANDWIDTH;
+int64_t jump_bandwidth_rand = DEFAULT_JUMP_BANDWIDTH;
+
 
 bool image_reject = false;
 uint32_t image_reject_selection;
@@ -765,6 +776,10 @@ static void usage()
 	       u64toa( DEFAULT_JUMPS_LOW, &ascii_u64_data[0]),
 	       u64toa( DEFAULT_JUMPS_HIGH, &ascii_u64_data[1]),
 	       u64toa( DEFAULT_JUMPS, &ascii_u64_data[2]));
+	printf("\t[-J jump bandwidth or hop bandwidth] #  (%s - %s bandwidth supported, default %s jump bandwidth).\n",
+	       u64toa( DEFAULT_JUMP_BANDWIDTH_LOW, &ascii_u64_data[0]),
+	       u64toa( DEFAULT_JUMP_BANDWIDTH_HIGH, &ascii_u64_data[1]),
+	       u64toa( DEFAULT_JUMP_BANDWIDTH, &ascii_u64_data[2]));
 	printf("\t[-s sample_rate_hz] # Sample rate in Hz (%s-%sMHz supported, default %sMHz).\n",
 	       u64toa((SAMPLE_RATE_MIN_HZ / FREQ_ONE_MHZ), &ascii_u64_data[0]),
 	       u64toa((SAMPLE_RATE_MAX_HZ / FREQ_ONE_MHZ), &ascii_u64_data[1]),
@@ -822,6 +837,7 @@ int main(int argc, char** argv)
     int i;
 	int64_t center_tx_freq_hz;
 	int64_t freq_hz_rounded_1M;
+	int64_t jump_freq_hz_rounded_1M;
     /* int iteration;*/
 	char path_file[PATH_FILE_MAX_LEN];
 	char date_time[DATE_TIME_MAX_LEN];
@@ -840,7 +856,7 @@ int main(int argc, char** argv)
 	hackrf_m0_state state;
 	stats_t stats = {0, 0};
 
-	while ((opt = getopt(argc, argv, "Hwr:j:t:f:i:o:m:a:p:s:Fn:b:l:g:x:c:d:C:RSZ:Bh?")) !=
+	while ((opt = getopt(argc, argv, "Hwr:j:J:t:f:i:o:m:a:p:s:Fn:b:l:g:x:c:d:C:RSZ:Bh?")) !=
 	       EOF) {
 		result = HACKRF_SUCCESS;
 		switch (opt) {
@@ -891,6 +907,11 @@ int main(int argc, char** argv)
 
 		case 'j':
 			result = parse_frequency_i64(optarg, endptr, &jumps);
+			break;
+
+		case 'J':
+			result = parse_frequency_i64(optarg, endptr, &jump_bandwidth);
+			jump_bw_set = true;
 			break;
 
 		case 'm':
@@ -995,6 +1016,16 @@ int main(int argc, char** argv)
 			"argument error: jumps must be between %s and %s\n",
 			u64toa(DEFAULT_JUMPS_LOW, &ascii_u64_data[0]),
 			u64toa(DEFAULT_JUMPS_HIGH, &ascii_u64_data[1]));
+		usage();
+		return EXIT_FAILURE;
+	}
+
+    /* hackrf_tx_ct try starting earlier */
+	if ( jump_bandwidth < DEFAULT_JUMP_BANDWIDTH_LOW || jump_bandwidth > DEFAULT_JUMP_BANDWIDTH_HIGH) {
+		fprintf(stderr,
+			"argument error: jump bandwidth must be between %s and %s\n",
+			u64toa(DEFAULT_JUMP_BANDWIDTH_LOW, &ascii_u64_data[0]),
+			u64toa(DEFAULT_JUMP_BANDWIDTH_HIGH, &ascii_u64_data[1]));
 		usage();
 		return EXIT_FAILURE;
 	}
@@ -1252,7 +1283,14 @@ int main(int argc, char** argv)
 	// fprintf(stderr,"random_freq_iteration_index %d\n",random_freq_iteration_index);
 
 	/* note the freq_hz may not be rounded to the nearest 1 million */
-	freq_hz_rounded_1M = trunc(freq_hz/1000000)*1000000;
+	// note the frequency passed in by rf_helper needs to be multiplied by 1000
+	if (jump_bw_set) {
+		freq_hz = freq_hz * 1000;
+		freq_hz_rounded_1M = trunc(freq_hz/1000000)*1000000;
+	}
+	else {
+		freq_hz_rounded_1M = trunc(freq_hz/1000000)*1000000;
+	}
 
 	fprintf(stderr,"freq_hz %ld to nearest 1000000 is %ld\n",freq_hz,freq_hz_rounded_1M);
 
@@ -1273,35 +1311,49 @@ int main(int argc, char** argv)
     while(1){
         // fprintf(stderr,"hackrf_tx_ct in while\n");
         if(i<jumps){
-			/* at the random interval tx the frequecy of the channel */
-			if (i == random_freq_iteration_index){
-				center_tx_freq_hz = freq_hz_rounded_1M;
-				/* find the indecies */
-				for(iter_index=0; iter_index<arrLen; iter_index++){
-					if (tx_freq[iter_index]== center_tx_freq_hz){
-						index_to_remove = iter_index;
-						break;
+			if (jump_bw_set){
+				
+				jump_freq_hz_rounded_1M = freq_hz_rounded_1M;
+				jump_freq_hz_rounded_1M -= (jump_bandwidth/2)*1e6;
+				gettimeofday(&t1, NULL);
+				srand(t1.tv_usec + t1.tv_sec * 1000000); // combine seconds and usec
+				//srand(time(0));
+				jump_bandwidth_rand = (rand() % (jump_bandwidth + 1));
+				center_tx_freq_hz = jump_freq_hz_rounded_1M + jump_bandwidth_rand * 1e6;
+				// center_tx_freq_hz = freq_hz_rounded_1M; // for testing
+				fprintf(stderr,"TX freq: %ld rand_bw: %ld\n",center_tx_freq_hz, jump_bandwidth_rand);
+
+			}
+			// hops over various frequencies
+			else{
+				/* at the random interval tx the frequecy of the channel */
+				if (i == random_freq_iteration_index){
+					center_tx_freq_hz = freq_hz_rounded_1M;
+					/* find the indecies */
+					for(iter_index=0; iter_index<arrLen; iter_index++){
+						if (tx_freq[iter_index]== center_tx_freq_hz){
+							index_to_remove = iter_index;
+							break;
+						}
 					}
 				}
+				else{
+					srand(time(NULL));
+					index_to_remove =rand() % arrLen; /* note the tx_freq is immutable so the length is the same */
+					center_tx_freq_hz = tx_freq[index_to_remove];
+				}
+				// gettimeofday(&time_check, NULL);
+				// time_diff = TimevalDiff(&time_check, &time_begin);
+				// fprintf(stderr, "Time 1 Begin: %5.5f s\n", time_diff);
+				/* gettimeofday(&time_begin, NULL); */
+				fprintf(stderr,"TX freq: %ld TX index: %d\n",tx_freq[index_to_remove], index_to_remove);
+				/* remove from the array, move up other entries */
+				for(freq_index=index_to_remove; freq_index<arrLen; freq_index++){
+					tx_freq[freq_index]=tx_freq[freq_index+1];
+				}
+				arrLen -= 1;
 			}
-			else{
-				srand(time(NULL));
-				index_to_remove =rand() % arrLen; /* note the tx_freq is immutable so the length is the same */
-				center_tx_freq_hz = tx_freq[index_to_remove];
 
-			}
-
-			// gettimeofday(&time_check, NULL);
-			// time_diff = TimevalDiff(&time_check, &time_begin);
-			// fprintf(stderr, "Time 1 Begin: %5.5f s\n", time_diff);
-			/* gettimeofday(&time_begin, NULL); */
-
-			fprintf(stderr,"TX freq: %ld TX index: %d\n",tx_freq[index_to_remove], index_to_remove);
-			/* remove from the array, move up other entries */
-			for(freq_index=index_to_remove; freq_index<arrLen; freq_index++){
-				tx_freq[freq_index]=tx_freq[freq_index+1];
-			}
-			arrLen -= 1;
 
 			// fprintf(stderr,"size of tx_freq (arrLen) %i\n",arrLen);
 
